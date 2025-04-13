@@ -1,13 +1,13 @@
 
 import { useInView } from "@/hooks/useInView";
 import {
-  MoveRight,
   MessageSquare,
   Code,
   Smartphone,
   Zap,
   BarChart,
 } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
 
 interface ProcessStepProps {
   icon: React.ReactNode;
@@ -15,7 +15,7 @@ interface ProcessStepProps {
   description: string;
   step: number;
   isLastStep?: boolean;
-  delay: number;
+  isVisible: boolean;
 }
 
 const ProcessStep = ({
@@ -24,24 +24,24 @@ const ProcessStep = ({
   description,
   step,
   isLastStep = false,
-  delay,
+  isVisible,
 }: ProcessStepProps) => {
-  const { ref, inView } = useInView({
-    threshold: 0.1,
-    triggerOnce: true,
-  });
-
   return (
     <div
-      ref={ref}
-      className={`relative flex ${
-        inView ? "opacity-100" : "opacity-0"
+      className={`relative flex transition-all duration-700 ease-out ${
+        isVisible 
+          ? "opacity-100 transform translate-y-0" 
+          : "opacity-0 transform translate-y-20"
       }`}
-      style={{ transition: `opacity 0.5s ease ${delay}ms` }}
     >
       {/* Line connector */}
       {!isLastStep && (
-        <div className="absolute top-12 left-6 w-0.5 h-full bg-gray-200"></div>
+        <div className="absolute top-12 left-6 w-0.5 bg-gray-200"
+          style={{
+            height: isVisible ? '100%' : '0%',
+            transition: 'height 0.7s ease-out'
+          }}
+        ></div>
       )}
 
       <div className="relative z-10 flex flex-col items-start">
@@ -66,11 +66,14 @@ const ProcessStep = ({
 };
 
 const Process = () => {
+  const sectionRef = useRef<HTMLElement>(null);
   const { ref, inView } = useInView({
     threshold: 0.1,
     triggerOnce: true,
   });
 
+  const [visibleSteps, setVisibleSteps] = useState<boolean[]>([]);
+  
   const processSteps = [
     {
       icon: <MessageSquare size={20} />,
@@ -104,8 +107,36 @@ const Process = () => {
     },
   ];
 
+  // Initialize the visibility array when the component mounts
+  useEffect(() => {
+    setVisibleSteps(new Array(processSteps.length).fill(false));
+  }, []);
+
+  // When the section comes into view, start showing steps one by one
+  useEffect(() => {
+    if (inView) {
+      const showNextStep = (index: number) => {
+        if (index < processSteps.length) {
+          setVisibleSteps(prev => {
+            const updated = [...prev];
+            updated[index] = true;
+            return updated;
+          });
+          
+          // Schedule the next step to appear
+          setTimeout(() => {
+            showNextStep(index + 1);
+          }, 700); // Delay between steps
+        }
+      };
+      
+      // Start the sequence
+      showNextStep(0);
+    }
+  }, [inView, processSteps.length]);
+
   return (
-    <section id="process" className="section-spacing">
+    <section id="process" className="section-spacing" ref={sectionRef}>
       <div className="container-custom">
         <div className="text-center mb-16" ref={ref}>
           <h2
@@ -135,7 +166,7 @@ const Process = () => {
               description={step.description}
               step={index + 1}
               isLastStep={index === processSteps.length - 1}
-              delay={index * 100}
+              isVisible={visibleSteps[index]}
             />
           ))}
         </div>

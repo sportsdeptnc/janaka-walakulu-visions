@@ -2,31 +2,23 @@
 import { useInView } from "@/hooks/useInView";
 import { Code, Palette, LineChart, Smartphone, Zap, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 interface ServiceCardProps {
   icon: React.ReactNode;
   title: string;
   description: string;
-  delay: number;
+  isVisible: boolean;
 }
 
-const ServiceCard = ({ icon, title, description, delay }: ServiceCardProps) => {
-  const { ref, inView } = useInView({
-    threshold: 0.1,
-    triggerOnce: true,
-  });
-
+const ServiceCard = ({ icon, title, description, isVisible }: ServiceCardProps) => {
   return (
     <div
-      ref={ref}
-      className={`bg-white rounded-2xl shadow-lg p-6 card-hover ${
-        inView
+      className={`bg-white rounded-2xl shadow-lg p-6 card-hover transition-all duration-500 ease-out ${
+        isVisible
           ? "opacity-100 translate-y-0"
           : "opacity-0 translate-y-8"
       }`}
-      style={{
-        transition: `all 0.5s ease ${delay}ms`,
-      }}
     >
       <div className="h-14 w-14 gradient-bg rounded-xl flex items-center justify-center mb-5 text-white">
         {icon}
@@ -46,6 +38,8 @@ const Services = () => {
     triggerOnce: true,
   });
 
+  const [visibleCards, setVisibleCards] = useState<boolean[]>([]);
+  
   const services = [
     {
       icon: <Code size={24} />,
@@ -85,6 +79,34 @@ const Services = () => {
     },
   ];
 
+  // Initialize visibility array when component mounts
+  useEffect(() => {
+    setVisibleCards(new Array(services.length).fill(false));
+  }, []);
+
+  // When section comes into view, show cards sequentially
+  useEffect(() => {
+    if (inView) {
+      const showNextCard = (index: number) => {
+        if (index < services.length) {
+          setVisibleCards(prev => {
+            const updated = [...prev];
+            updated[index] = true;
+            return updated;
+          });
+          
+          // Schedule the next card to appear
+          setTimeout(() => {
+            showNextCard(index + 1);
+          }, 200); // Slightly faster than process steps
+        }
+      };
+      
+      // Start the sequence
+      showNextCard(0);
+    }
+  }, [inView, services.length]);
+
   return (
     <section id="services" className="section-spacing">
       <div className="container-custom">
@@ -114,7 +136,7 @@ const Services = () => {
               icon={service.icon}
               title={service.title}
               description={service.description}
-              delay={index * 100}
+              isVisible={visibleCards[index]}
             />
           ))}
         </div>
