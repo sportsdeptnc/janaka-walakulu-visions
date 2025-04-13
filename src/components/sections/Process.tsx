@@ -1,4 +1,6 @@
+
 import { useInView } from "@/hooks/useInView";
+import { useScrollJacking } from "@/hooks/useScrollJacking";
 import {
   MessageSquare,
   Code,
@@ -13,8 +15,10 @@ interface ProcessStepProps {
   title: string;
   description: string;
   step: number;
-  isLastStep?: boolean;
-  isVisible: boolean;
+  isActive: boolean;
+  activeIndex: number;
+  index: number;
+  setStepRef: (index: number) => (node: HTMLDivElement | null) => void;
 }
 
 const ProcessStep = ({
@@ -22,42 +26,47 @@ const ProcessStep = ({
   title,
   description,
   step,
-  isLastStep = false,
-  isVisible,
+  isActive,
+  activeIndex,
+  index,
+  setStepRef,
 }: ProcessStepProps) => {
+  // Calculate if this step should be visible based on the active step
+  const isVisible = index <= activeIndex;
+  
+  // Calculate the z-index and position for the stacking effect
+  const zIndex = 50 - index; // Higher index = lower in stack
+  const translateY = isVisible ? 0 : 100; // Hide steps that aren't visible yet
+  
   return (
     <div
-      className={`relative flex transition-all duration-700 ease-out ${
-        isVisible 
-          ? "opacity-100 transform translate-y-0" 
-          : "opacity-0 transform translate-y-20"
+      ref={setStepRef(index)}
+      className={`transition-all duration-700 ease-out absolute top-0 left-0 right-0 w-full ${
+        isVisible ? "opacity-100" : "opacity-0"
       }`}
+      style={{
+        zIndex,
+        transform: `translateY(${translateY}px)`,
+        transition: "transform 0.7s ease-out, opacity 0.7s ease-out",
+      }}
     >
-      {/* Line connector */}
-      {!isLastStep && (
-        <div className="absolute top-12 left-6 w-0.5 bg-gray-200"
-          style={{
-            height: isVisible ? '100%' : '0%',
-            transition: 'height 0.7s ease-out'
-          }}
-        ></div>
-      )}
-
-      <div className="relative z-10 flex flex-col items-start">
-        {/* Step icon */}
-        <div className="h-12 w-12 gradient-bg rounded-full flex items-center justify-center text-white mb-4">
-          {icon}
-        </div>
-
-        {/* Content */}
-        <div className="bg-white rounded-xl p-6 shadow-lg max-w-md">
-          <div className="flex items-center mb-3">
-            <span className="text-xs font-semibold bg-gray-100 rounded px-2 py-1 mr-3">
-              Step {step}
-            </span>
-            <h3 className="text-xl font-bold">{title}</h3>
+      <div className="flex justify-center">
+        <div className="relative flex max-w-3xl">
+          {/* Step icon */}
+          <div className="h-12 w-12 gradient-bg rounded-full flex items-center justify-center text-white mb-4 z-10">
+            {icon}
           </div>
-          <p className="text-gray-600">{description}</p>
+
+          {/* Content */}
+          <div className="bg-white rounded-xl p-6 shadow-lg max-w-md ml-4">
+            <div className="flex items-center mb-3">
+              <span className="text-xs font-semibold bg-gray-100 rounded px-2 py-1 mr-3">
+                Step {step}
+              </span>
+              <h3 className="text-xl font-bold">{title}</h3>
+            </div>
+            <p className="text-gray-600">{description}</p>
+          </div>
         </div>
       </div>
     </div>
@@ -70,8 +79,6 @@ const Process = () => {
     threshold: 0.1,
     triggerOnce: true,
   });
-
-  const [visibleSteps, setVisibleSteps] = useState<boolean[]>([]);
   
   const processSteps = [
     {
@@ -106,32 +113,15 @@ const Process = () => {
     },
   ];
 
-  useEffect(() => {
-    setVisibleSteps(new Array(processSteps.length).fill(false));
-  }, []);
-
-  useEffect(() => {
-    if (inView) {
-      const showNextStep = (index: number) => {
-        if (index < processSteps.length) {
-          setVisibleSteps(prev => {
-            const updated = [...prev];
-            updated[index] = true;
-            return updated;
-          });
-          
-          setTimeout(() => {
-            showNextStep(index + 1);
-          }, 700);
-        }
-      };
-      
-      showNextStep(0);
-    }
-  }, [inView, processSteps.length]);
+  // Use our scroll jacking hook
+  const { activeStep, setStepRef } = useScrollJacking({
+    totalSteps: processSteps.length,
+    sectionId: "process",
+    stepHeight: 600
+  });
 
   return (
-    <section id="process" className="section-spacing" ref={sectionRef}>
+    <section id="process" className="section-spacing relative" ref={sectionRef}>
       <div className="container-custom">
         <div className="text-center mb-16" ref={ref}>
           <h2
@@ -152,7 +142,8 @@ const Process = () => {
           </p>
         </div>
 
-        <div className="space-y-16 md:space-y-24 md:pl-8">
+        {/* Steps container - fixed height for consistent scroll jacking */}
+        <div className="relative h-[500px] mb-[500px]"> 
           {processSteps.map((step, index) => (
             <ProcessStep
               key={index}
@@ -160,8 +151,10 @@ const Process = () => {
               title={step.title}
               description={step.description}
               step={index + 1}
-              isLastStep={index === processSteps.length - 1}
-              isVisible={visibleSteps[index]}
+              isActive={index === activeStep}
+              activeIndex={activeStep}
+              index={index}
+              setStepRef={setStepRef}
             />
           ))}
         </div>
