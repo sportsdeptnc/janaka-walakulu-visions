@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useInView } from "@/hooks/useInView";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Mail, Phone, MapPin, Send } from "lucide-react";
 
 const Contact = () => {
-  const { ref, inView } = useInView({
+  const { ref, inView } = useInView<HTMLDivElement>({
     threshold: 0.1,
     triggerOnce: true,
   });

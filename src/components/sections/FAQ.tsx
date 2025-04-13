@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/accordion";
 
 const FAQ = () => {
-  const { ref, inView } = useInView({
+  const { ref, inView } = useInView<HTMLDivElement>({
     threshold: 0.1,
     triggerOnce: true,
   });

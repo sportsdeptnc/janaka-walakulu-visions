@@ -1,4 +1,3 @@
-
 import { useInView } from "@/hooks/useInView";
 import {
   MessageSquare,
@@ -67,7 +66,7 @@ const ProcessStep = ({
 
 const Process = () => {
   const sectionRef = useRef<HTMLElement>(null);
-  const { ref, inView } = useInView({
+  const { ref, inView } = useInView<HTMLDivElement>({
     threshold: 0.1,
     triggerOnce: true,
   });
@@ -107,12 +106,10 @@ const Process = () => {
     },
   ];
 
-  // Initialize the visibility array when the component mounts
   useEffect(() => {
     setVisibleSteps(new Array(processSteps.length).fill(false));
   }, []);
 
-  // When the section comes into view, start showing steps one by one
   useEffect(() => {
     if (inView) {
       const showNextStep = (index: number) => {
@@ -123,14 +120,12 @@ const Process = () => {
             return updated;
           });
           
-          // Schedule the next step to appear
           setTimeout(() => {
             showNextStep(index + 1);
-          }, 700); // Delay between steps
+          }, 700);
         }
       };
       
-      // Start the sequence
       showNextStep(0);
     }
   }, [inView, processSteps.length]);

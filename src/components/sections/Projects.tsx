@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useInView } from "@/hooks/useInView";
 import { Link } from "react-router-dom";
@@ -12,7 +11,7 @@ interface ProjectCardProps {
 }
 
 const ProjectCard = ({ image, title, category, index }: ProjectCardProps) => {
-  const { ref, inView } = useInView({
+  const { ref, inView } = useInView<HTMLDivElement>({
     threshold: 0.1,
     triggerOnce: true,
   });
@@ -49,7 +48,7 @@ const ProjectCard = ({ image, title, category, index }: ProjectCardProps) => {
 };
 
 const Projects = () => {
-  const { ref, inView } = useInView({
+  const { ref, inView } = useInView<HTMLDivElement>({
     threshold: 0.1,
     triggerOnce: true,
   });

@@ -1,4 +1,3 @@
-
 import { useInView } from "@/hooks/useInView";
 import { Code, Palette, LineChart, Smartphone, Zap, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -33,7 +32,7 @@ const ServiceCard = ({ icon, title, description, isVisible }: ServiceCardProps) 
 };
 
 const Services = () => {
-  const { ref, inView } = useInView({
+  const { ref, inView } = useInView<HTMLDivElement>({
     threshold: 0.1,
     triggerOnce: true,
   });
@@ -79,12 +78,10 @@ const Services = () => {
     },
   ];
 
-  // Initialize visibility array when component mounts
   useEffect(() => {
     setVisibleCards(new Array(services.length).fill(false));
   }, []);
 
-  // When section comes into view, show cards sequentially
   useEffect(() => {
     if (inView) {
       const showNextCard = (index: number) => {
@@ -95,14 +92,12 @@ const Services = () => {
             return updated;
           });
           
-          // Schedule the next card to appear
           setTimeout(() => {
             showNextCard(index + 1);
-          }, 200); // Slightly faster than process steps
+          }, 200);
         }
       };
       
-      // Start the sequence
       showNextCard(0);
     }
   }, [inView, services.length]);
