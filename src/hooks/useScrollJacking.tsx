@@ -18,6 +18,8 @@ export function useScrollJacking({
   const [isJacking, setIsJacking] = useState(false);
   const previousScrollY = useRef(0);
   const stepRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const isScrolling = useRef(false);
 
   // Set up refs array
   useEffect(() => {
@@ -26,19 +28,24 @@ export function useScrollJacking({
 
   useEffect(() => {
     let scrollTimeout: number;
-    let sectionElement: HTMLElement | null = null;
     let sectionTop = 0;
     let sectionHeight = 0;
     
-    const handleScroll = () => {
-      if (!sectionElement) {
-        sectionElement = document.getElementById(sectionId);
-        if (!sectionElement) return;
-        
-        const rect = sectionElement.getBoundingClientRect();
-        sectionTop = window.scrollY + rect.top - startOffset;
-        sectionHeight = rect.height + startOffset + 200; // Add extra space for completion
+    const calculateSectionDimensions = () => {
+      if (!sectionRef.current) {
+        sectionRef.current = document.getElementById(sectionId);
+        if (!sectionRef.current) return false;
       }
+      
+      const rect = sectionRef.current.getBoundingClientRect();
+      sectionTop = window.scrollY + rect.top - startOffset;
+      sectionHeight = rect.height + startOffset + 200; // Add extra space for completion
+      return true;
+    };
+    
+    const handleScroll = () => {
+      // Get section dimensions if not already calculated
+      if (!calculateSectionDimensions()) return;
       
       const scrollY = window.scrollY;
       const scrollDirection = scrollY > previousScrollY.current ? 'down' : 'up';
@@ -48,18 +55,19 @@ export function useScrollJacking({
       if (scrollY >= sectionTop && scrollY < sectionTop + sectionHeight) {
         // Calculate which step should be active based on scroll position
         const scrollProgress = scrollY - sectionTop;
-        const stepProgress = Math.min(Math.floor(scrollProgress / (stepHeight / totalSteps)), totalSteps - 1);
+        const segmentHeight = stepHeight / totalSteps;
+        const rawStepProgress = scrollProgress / segmentHeight;
+        const stepProgress = Math.min(Math.floor(rawStepProgress), totalSteps - 1);
         
         if (stepProgress !== activeStep) {
-          setActiveStep(stepProgress);
-          
-          // Apply scroll jacking when changing steps
-          if (stepProgress < totalSteps) {
+          // Only change step if we're not already animating
+          if (!isScrolling.current) {
+            setActiveStep(stepProgress);
             setIsJacking(true);
-            clearTimeout(scrollTimeout);
+            isScrolling.current = true;
             
             // Calculate the target scroll position for the current step
-            const targetScrollPosition = sectionTop + (stepProgress * (stepHeight / totalSteps));
+            const targetScrollPosition = sectionTop + (stepProgress * segmentHeight);
             
             // Smoothly scroll to the target position
             window.scrollTo({
@@ -68,22 +76,31 @@ export function useScrollJacking({
             });
             
             // Release scroll jacking after animation completes
+            clearTimeout(scrollTimeout);
             scrollTimeout = window.setTimeout(() => {
               setIsJacking(false);
-            }, 800);
-          } else {
-            setIsJacking(false);
+              isScrolling.current = false;
+            }, 600);
           }
         }
       } else if (scrollY < sectionTop && activeStep !== 0) {
         // Reset when scrolling above the section
         setActiveStep(0);
+      } else if (scrollY >= sectionTop + sectionHeight && activeStep < totalSteps - 1) {
+        // Make sure all steps are visible when scrolling past the section
+        setActiveStep(totalSteps - 1);
       }
     };
     
+    // Calculate dimensions initially
+    calculateSectionDimensions();
+    
     window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', calculateSectionDimensions);
+    
     return () => {
       window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', calculateSectionDimensions);
       clearTimeout(scrollTimeout);
     };
   }, [activeStep, sectionId, totalSteps, startOffset, stepHeight]);
@@ -108,6 +125,7 @@ export function useScrollJacking({
     stepRefs: stepRefs.current,
     setStepRef: (index: number) => (node: HTMLDivElement | null) => {
       stepRefs.current[index] = node;
-    }
+    },
+    sectionRef
   };
 }

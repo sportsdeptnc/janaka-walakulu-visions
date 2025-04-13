@@ -74,7 +74,6 @@ const ProcessStep = ({
 };
 
 const Process = () => {
-  const sectionRef = useRef<HTMLElement>(null);
   const { ref, inView } = useInView<HTMLDivElement>({
     threshold: 0.1,
     triggerOnce: true,
@@ -114,14 +113,23 @@ const Process = () => {
   ];
 
   // Use our scroll jacking hook
-  const { activeStep, setStepRef } = useScrollJacking({
+  const { activeStep, setStepRef, sectionRef } = useScrollJacking({
     totalSteps: processSteps.length,
     sectionId: "process",
     stepHeight: 600
   });
 
+  // Debug message to track active step changes
+  useEffect(() => {
+    console.log("Active step changed to:", activeStep);
+  }, [activeStep]);
+
   return (
-    <section id="process" className="section-spacing relative" ref={sectionRef}>
+    <section 
+      id="process" 
+      className="section-spacing relative" 
+      ref={sectionRef as React.RefObject<HTMLElement>}
+    >
       <div className="container-custom">
         <div className="text-center mb-16" ref={ref}>
           <h2
