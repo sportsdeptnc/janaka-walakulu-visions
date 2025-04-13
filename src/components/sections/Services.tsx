@@ -1,5 +1,5 @@
 
-import { useInView } from "react-intersection-observer";
+import { useInView } from "@/hooks/useInView";
 import { Code, Palette, LineChart, Smartphone, Zap, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 

@@ -1,5 +1,5 @@
 
-import { useInView } from "react-intersection-observer";
+import { useInView } from "@/hooks/useInView";
 import {
   Accordion,
   AccordionContent,

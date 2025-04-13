@@ -1,6 +1,5 @@
-
 import { useEffect, useRef } from "react";
-import { useInView } from "react-intersection-observer";
+import { useInView } from "@/hooks/useInView";
 
 const About = () => {
   const { ref, inView } = useInView({
