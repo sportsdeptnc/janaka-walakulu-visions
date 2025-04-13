@@ -20,6 +20,7 @@ export function useScrollJacking({
   const stepRefs = useRef<Array<HTMLDivElement | null>>([]);
   const sectionRef = useRef<HTMLElement | null>(null);
   const isScrolling = useRef(false);
+  const animationFrameRef = useRef<number | null>(null);
 
   // Set up refs array
   useEffect(() => {
@@ -42,58 +43,76 @@ export function useScrollJacking({
       sectionHeight = rect.height + startOffset + 200; // Add extra space for completion
       return true;
     };
-    
+
+    // Throttled scroll handler using requestAnimationFrame
     const handleScroll = () => {
-      // Get section dimensions if not already calculated
-      if (!calculateSectionDimensions()) return;
-      
-      const scrollY = window.scrollY;
-      const scrollDirection = scrollY > previousScrollY.current ? 'down' : 'up';
-      previousScrollY.current = scrollY;
-      
-      // Check if we're in the section's range
-      if (scrollY >= sectionTop && scrollY < sectionTop + sectionHeight) {
-        // Calculate which step should be active based on scroll position
-        const scrollProgress = scrollY - sectionTop;
-        const segmentHeight = stepHeight / totalSteps;
-        const rawStepProgress = scrollProgress / segmentHeight;
-        const stepProgress = Math.min(Math.floor(rawStepProgress), totalSteps - 1);
-        
-        if (stepProgress !== activeStep) {
-          // Only change step if we're not already animating
-          if (!isScrolling.current) {
-            setActiveStep(stepProgress);
-            setIsJacking(true);
-            isScrolling.current = true;
-            
-            // Calculate the target scroll position for the current step
-            const targetScrollPosition = sectionTop + (stepProgress * segmentHeight);
-            
-            // Smoothly scroll to the target position
-            window.scrollTo({
-              top: targetScrollPosition,
-              behavior: 'smooth'
-            });
-            
-            // Release scroll jacking after animation completes
-            clearTimeout(scrollTimeout);
-            scrollTimeout = window.setTimeout(() => {
-              setIsJacking(false);
-              isScrolling.current = false;
-            }, 600);
-          }
-        }
-      } else if (scrollY < sectionTop && activeStep !== 0) {
-        // Reset when scrolling above the section
-        setActiveStep(0);
-      } else if (scrollY >= sectionTop + sectionHeight && activeStep < totalSteps - 1) {
-        // Make sure all steps are visible when scrolling past the section
-        setActiveStep(totalSteps - 1);
+      if (animationFrameRef.current) {
+        return;
       }
+
+      animationFrameRef.current = requestAnimationFrame(() => {
+        // Get section dimensions if not already calculated
+        if (!calculateSectionDimensions()) {
+          animationFrameRef.current = null;
+          return;
+        }
+        
+        const scrollY = window.scrollY;
+        const scrollDirection = scrollY > previousScrollY.current ? 'down' : 'up';
+        previousScrollY.current = scrollY;
+        
+        // Check if we're in the section's range
+        if (scrollY >= sectionTop && scrollY < sectionTop + sectionHeight) {
+          // Calculate which step should be active based on scroll position
+          const scrollProgress = scrollY - sectionTop;
+          const segmentHeight = stepHeight / totalSteps;
+          let stepProgress = Math.min(Math.floor(scrollProgress / segmentHeight), totalSteps - 1);
+          
+          // Ensure stepProgress is valid
+          stepProgress = Math.max(0, Math.min(stepProgress, totalSteps - 1));
+          
+          if (stepProgress !== activeStep) {
+            // Only change step if we're not already animating
+            if (!isScrolling.current) {
+              console.log(`Changing step from ${activeStep} to ${stepProgress}`);
+              setActiveStep(stepProgress);
+              setIsJacking(true);
+              isScrolling.current = true;
+              
+              // Calculate the target scroll position for the current step
+              const targetScrollPosition = sectionTop + (stepProgress * segmentHeight);
+              
+              // Smoothly scroll to the target position
+              window.scrollTo({
+                top: targetScrollPosition,
+                behavior: 'smooth'
+              });
+              
+              // Release scroll jacking after animation completes
+              clearTimeout(scrollTimeout);
+              scrollTimeout = window.setTimeout(() => {
+                setIsJacking(false);
+                isScrolling.current = false;
+              }, 700); // Increased duration to ensure animation completes
+            }
+          }
+        } else if (scrollY < sectionTop && activeStep !== 0) {
+          // Reset when scrolling above the section
+          setActiveStep(0);
+        } else if (scrollY >= sectionTop + sectionHeight && activeStep < totalSteps - 1) {
+          // Make sure all steps are visible when scrolling past the section
+          setActiveStep(totalSteps - 1);
+        }
+        
+        animationFrameRef.current = null;
+      });
     };
     
-    // Calculate dimensions initially
-    calculateSectionDimensions();
+    // Calculate dimensions initially and force a first calculation
+    setTimeout(() => {
+      calculateSectionDimensions();
+      handleScroll();
+    }, 300);
     
     window.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('resize', calculateSectionDimensions);
@@ -102,6 +121,9 @@ export function useScrollJacking({
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', calculateSectionDimensions);
       clearTimeout(scrollTimeout);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
     };
   }, [activeStep, sectionId, totalSteps, startOffset, stepHeight]);
   
@@ -110,7 +132,10 @@ export function useScrollJacking({
     const preventScroll = (e: WheelEvent) => {
       if (isJacking) {
         e.preventDefault();
+        e.stopPropagation();
+        return false;
       }
+      return true;
     };
     
     window.addEventListener('wheel', preventScroll, { passive: false });

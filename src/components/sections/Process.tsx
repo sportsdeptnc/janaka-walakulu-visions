@@ -8,7 +8,7 @@ import {
   Zap,
   BarChart,
 } from "lucide-react";
-import { useEffect, useState, useRef } from "react";
+import { useEffect } from "react";
 
 interface ProcessStepProps {
   icon: React.ReactNode;
@@ -37,6 +37,11 @@ const ProcessStep = ({
   // Calculate the z-index and position for the stacking effect
   const zIndex = 50 - index; // Higher index = lower in stack
   const translateY = isVisible ? 0 : 100; // Hide steps that aren't visible yet
+  
+  // Debug output when a step changes visibility
+  useEffect(() => {
+    console.log(`Step ${index + 1} visibility: ${isVisible ? 'visible' : 'hidden'}`);
+  }, [isVisible, index]);
   
   return (
     <div
@@ -112,11 +117,12 @@ const Process = () => {
     },
   ];
 
-  // Use our scroll jacking hook
+  // Use our scroll jacking hook with adjusted parameters
   const { activeStep, setStepRef, sectionRef } = useScrollJacking({
     totalSteps: processSteps.length,
     sectionId: "process",
-    stepHeight: 600
+    stepHeight: 1000, // Increased for better detection
+    startOffset: 100,  // Reduced to start effect sooner
   });
 
   // Debug message to track active step changes
@@ -127,8 +133,8 @@ const Process = () => {
   return (
     <section 
       id="process" 
-      className="section-spacing relative" 
-      ref={sectionRef as React.RefObject<HTMLElement>}
+      className="section-spacing relative min-h-[800px]" 
+      ref={sectionRef as React.RefObject<HTMLDivElement>}
     >
       <div className="container-custom">
         <div className="text-center mb-16" ref={ref}>
